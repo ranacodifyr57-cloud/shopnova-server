@@ -1,3 +1,4 @@
+// ShopNova API v1.1
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
@@ -23,22 +24,31 @@ app.use('/api/categories', require('./routes/categories'))
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', service: 'ShopNova API' }))
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('✅ MongoDB connected')
-    const User = require('./models/User')
-    const bcrypt = require('bcryptjs')
-    await User.deleteMany({ role: 'admin' })
-    const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12)
-    await User.create({
-      name: 'Muhammad Amir',
-      email: process.env.ADMIN_EMAIL,
-      password: hash,
-      role: 'admin'
-    })
-    console.log('✅ Admin created')
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
-    })
+// Connect to MongoDB
+let isConnected = false
+
+const connectDB = async () => {
+  if (isConnected) return
+  await mongoose.connect(process.env.MONGODB_URI)
+  isConnected = true
+  console.log('✅ MongoDB connected')
+}
+
+// Middleware to connect DB on each request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB()
+    next()
+  } catch (err) {
+    res.status(500).json({ error: 'Database connection failed' })
+  }
+})
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(process.env.PORT || 5000, () => {
+    console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
   })
-  .catch(err => { console.error('❌ DB Error:', err.message); process.exit(1) })
+}
+
+module.exports = app
