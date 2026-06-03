@@ -1,10 +1,9 @@
 const jwt = require('jsonwebtoken')
 
-module.exports = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   const auth = req.headers.authorization
   if (!auth || !auth.startsWith('Bearer '))
     return res.status(401).json({ error: 'No token provided' })
-
   try {
     const decoded = jwt.verify(auth.split(' ')[1], process.env.JWT_SECRET)
     req.user = decoded
@@ -14,8 +13,4 @@ module.exports = (req, res, next) => {
   }
 }
 
-module.exports.isAdmin = (req, res, next) => {
-  if (req.user?.role !== 'admin')
-    return res.status(403).json({ error: 'Admin access required' })
-  next()
-}
+module.exports = authMiddleware
