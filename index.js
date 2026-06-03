@@ -1,4 +1,3 @@
-// ShopNova API v1.1
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
@@ -17,24 +16,20 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-app.use('/api/auth', require('./routes/auth'))
-app.use('/api/products', require('./routes/products'))
-app.use('/api/orders', require('./routes/orders'))
-app.use('/api/categories', require('./routes/categories'))
-
-app.get('/api/health', (req, res) => res.json({ status: 'OK', service: 'ShopNova API' }))
-
 // Connect to MongoDB
 let isConnected = false
-
 const connectDB = async () => {
   if (isConnected) return
-  await mongoose.connect(process.env.MONGODB_URI)
-  isConnected = true
-  console.log('✅ MongoDB connected')
+  try {
+    await mongoose.connect(process.env.MONGODB_URI)
+    isConnected = true
+  } catch (err) {
+    console.error('DB Error:', err.message)
+    throw err
+  }
 }
 
-// Middleware to connect DB on each request
+// DB middleware - runs before every request
 app.use(async (req, res, next) => {
   try {
     await connectDB()
@@ -44,11 +39,19 @@ app.use(async (req, res, next) => {
   }
 })
 
-// For local development
+// Routes
+app.use('/api/auth', require('./routes/auth'))
+app.use('/api/products', require('./routes/products'))
+app.use('/api/orders', require('./routes/orders'))
+app.use('/api/categories', require('./routes/categories'))
+
+// Health check
+app.get('/api/health', (req, res) => res.json({ status: 'OK', service: 'ShopNova API' }))
+
+// Local development only
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(process.env.PORT || 5000, () => {
-    console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
-  })
+  const PORT = process.env.PORT || 5000
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`))
 }
 
 module.exports = app
