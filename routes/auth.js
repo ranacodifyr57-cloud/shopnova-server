@@ -33,16 +33,25 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// GET /api/auth/setup
-router.get('/setup', async (req, res) => {
+// POST /api/auth/setup
+// SAFE: only creates the admin if it does NOT already exist.
+// It never deletes users, so your customer accounts are protected.
+router.post('/setup', async (req, res) => {
   try {
-    await User.deleteMany({})
-    const hash = await bcrypt.hash('shopnova123', 12)
+    const adminEmail = (process.env.ADMIN_EMAIL || 'rana.codifyr57@gmail.com').toLowerCase()
+    const adminPassword = process.env.ADMIN_PASSWORD || 'shopnova123'
+
+    const existing = await User.findOne({ email: adminEmail })
+    if (existing) {
+      return res.json({ success: true, message: 'Admin already exists. Nothing was changed.' })
+    }
+
+    const hash = await bcrypt.hash(adminPassword, 12)
     await User.create({
       name: 'Muhammad Amir',
-      email: 'rana.codifyr57@gmail.com',
+      email: adminEmail,
       password: hash,
-      role: 'admin'
+      role: 'admin',
     })
     res.json({ success: true, message: 'Admin created!' })
   } catch (err) {
